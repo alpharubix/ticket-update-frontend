@@ -3,10 +3,19 @@ import Header from './components/header'
 
 function App() {
   const [selectedFile, setSelectedFile] = useState(null)
+  const [selectedUser, setSelectedUser] = useState('') // New state for user selection
   const [isDragging, setIsDragging] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadResponse, setUploadResponse] = useState(null)
   const [error, setError] = useState(null)
+  const [showUserWarning, setShowUserWarning] = useState(false) // New state for warning
+
+  // Sample user list - replace with your actual users
+  const userList = [
+    { id: 1, name: 'Sutapa Roy' },
+    { id: 2, name: 'Subhasini T S' },
+    { id: 3, name: 'Namrata Srivastava' },
+  ]
 
   // Validate if file is Excel
   const isExcelFile = (file) => {
@@ -34,6 +43,12 @@ function App() {
     setSelectedFile(file)
     setError(null)
     setUploadResponse(null)
+  }
+
+  // Handle user selection
+  const handleUserSelect = (e) => {
+    setSelectedUser(e.target.value)
+    setShowUserWarning(false) // Hide warning when user selects
   }
 
   // Handle drag and drop
@@ -69,16 +84,20 @@ function App() {
   const uploadFile = async () => {
     if (!selectedFile) return
 
+    // Validate user selection
+    if (!selectedUser) {
+      setShowUserWarning(true)
+      setTimeout(() => setShowUserWarning(false), 3000) // Auto-hide after 3 seconds
+      return
+    }
+
     setIsUploading(true)
     setError(null)
 
     try {
       const formData = new FormData()
       formData.append('file', selectedFile)
-
-      // Add any additional fields you need
-      formData.append('timestamp', new Date().toISOString())
-      formData.append('fileType', 'excel')
+      formData.append('username', selectedUser) // Add selected user to form data
 
       const response = await fetch(
         'https://ticket-update-backend.vercel.app/upload-excel',
@@ -107,8 +126,10 @@ function App() {
   // Reset upload state
   const resetUpload = () => {
     setSelectedFile(null)
+    setSelectedUser('') // Reset user selection
     setUploadResponse(null)
     setError(null)
+    setShowUserWarning(false) // Hide warning
     // Reset file input
     const fileInput = document.getElementById('uploadFile1')
     if (fileInput) fileInput.value = ''
@@ -118,9 +139,51 @@ function App() {
     <>
       <Header />
       <div className='max-w-4xl mx-auto mt-4 px-4'>
+        {/* Floating Warning for User Selection */}
+        {showUserWarning && (
+          <div className='fixed top-20 right-6 z-50 bg-red-500 text-white px-4 py-3 rounded-lg shadow-lg flex items-center animate-bounce'>
+            <svg
+              className='w-5 h-5 mr-2'
+              fill='currentColor'
+              viewBox='0 0 20 20'
+            >
+              <path
+                fillRule='evenodd'
+                d='M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z'
+                clipRule='evenodd'
+              />
+            </svg>
+            Please select a username before uploading!
+          </div>
+        )}
+
+        {/* User Selection Dropdown */}
+        <div className='max-w-md mx-auto mt-6'>
+          <label className='block text-sm font-medium text-gray-700 mb-2'>
+            Select User <span className='text-red-500'>*</span>
+          </label>
+          <select
+            value={selectedUser}
+            onChange={handleUserSelect}
+            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              showUserWarning ? 'border-red-500 bg-red-50' : 'border-gray-300'
+            }`}
+          >
+            <option value=''>-- Select a user --</option>
+            {userList.map((user) => (
+              <option key={user.id} value={user.name}>
+                {user.name}
+              </option>
+            ))}
+          </select>
+          {showUserWarning && (
+            <p className='text-red-500 text-sm mt-1'>This field is required</p>
+          )}
+        </div>
+
         {/* File Upload Area */}
         <div
-          className={`bg-gray-50 text-center px-4 rounded max-w-md flex flex-col items-center justify-center cursor-pointer border-2 border-dashed mx-auto mt-10 transition-colors ${
+          className={`bg-gray-50 text-center px-4 rounded max-w-md flex flex-col items-center justify-center cursor-pointer border-2 border-dashed mx-auto mt-6 transition-colors ${
             isDragging
               ? 'border-blue-400 bg-blue-50'
               : selectedFile
@@ -170,11 +233,16 @@ function App() {
             <p className='text-xs text-slate-500 mt-4'>Excel Files Allowed.</p>
           </div>
         </div>
+
         <div className='max-w-md mx-auto mt-4 p-2 bg-green-50 border border-blue-200 rounded cursor-pointer'>
-          <a href='https://ticket-update-backend.vercel.app/get-sample-file' className='underline text-blue-500'>
+          <a
+            href='https://ticket-update-backend.vercel.app/get-sample-file'
+            className='underline text-blue-500'
+          >
             Download sample file
           </a>
         </div>
+
         {/* Error Message */}
         {error && (
           <div className='max-w-md mx-auto mt-4 p-4 bg-red-50 border border-red-200 rounded'>
@@ -185,19 +253,25 @@ function App() {
         {/* Selected File Info */}
         {selectedFile && (
           <div className='max-w-md mx-auto mt-4 p-4 bg-blue-50 border border-blue-200 rounded'>
-            <h5 className='font-semibold text-blue-800 mb-2'>Selected File:</h5>
-            <p className='text-sm text-blue-700'>Name: {selectedFile.name}</p>
+            <h5 className='font-semibold text-blue-800 mb-2'>
+              Upload Details:
+            </h5>
+            {selectedUser && (
+              <p className='text-sm text-blue-700 mb-1'>User: {selectedUser}</p>
+            )}
+            <p className='text-sm text-blue-700'>File: {selectedFile.name}</p>
             <p className='text-sm text-blue-700'>
               Size: {(selectedFile.size / 1024).toFixed(2)} KB
             </p>
-            {/* <p className='text-sm text-blue-700'>Type: {selectedFile.type}</p> */}
 
             <div className='mt-4 space-x-2'>
               <button
                 onClick={uploadFile}
                 disabled={isUploading}
-                className={`px-4 py-2 rounded text-white font-semibold ${
+                className={`px-4 py-2 rounded text-white font-semibold transition-colors ${
                   isUploading
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : !selectedUser
                     ? 'bg-gray-400 cursor-not-allowed'
                     : 'bg-blue-500 hover:bg-blue-600'
                 }`}
@@ -221,13 +295,7 @@ function App() {
             <h5 className='font-semibold text-green-800 mb-3'>
               Upload Response:
             </h5>
-            {/* <div className='bg-white p-3 rounded border overflow-x-auto'>
-              <pre className='text-sm text-gray-700 whitespace-pre-wrap'>
-                {JSON.stringify(uploadResponse, null, 2)}
-              </pre>
-            </div> */}
 
-            {/* If your backend returns specific data structure, you can format it better */}
             {uploadResponse.message && (
               <p className='mt-2 text-green-700 font-medium'>
                 {uploadResponse.message}
@@ -238,7 +306,6 @@ function App() {
               <div className='mt-3'>
                 <h6 className='font-medium text-green-800'>Processed Data:</h6>
                 <div className='mt-2 text-sm text-green-700'>
-                  {/* Format your data as needed */}
                   {Array.isArray(uploadResponse.data) && (
                     <p>Records processed: {uploadResponse.data.length}</p>
                   )}
