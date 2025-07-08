@@ -97,7 +97,7 @@ function App() {
     try {
       const formData = new FormData()
       formData.append('file', selectedFile)
-      formData.append('username', selectedUser) // Add selected user to form data
+      formData.append('username', selectedUser)
 
       const response = await fetch(
         'https://ticket-update-backend.vercel.app/upload-excel',
